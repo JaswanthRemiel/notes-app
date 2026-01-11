@@ -7,7 +7,7 @@ export async function getMoodboardItems(userId: string): Promise<MoodboardItem[]
     const response = await databases.listDocuments(
         DATABASE_ID,
         MOODBOARD_COLLECTION_ID,
-        [Query.equal('userId', userId), Query.orderDesc('$createdAt')]
+        [Query.equal('userId', userId), Query.orderAsc('$updatedAt')]
     );
     return response.documents as unknown as MoodboardItem[];
 }

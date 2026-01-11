@@ -37,7 +37,7 @@ export function useMoodboard() {
 
         try {
             const newItem = await createMoodboardItem(user.$id, data);
-            setItems(prev => [newItem, ...prev]);
+            setItems(prev => [...prev, newItem]);
             return newItem;
         } catch (err) {
             setError('Failed to add item');
@@ -48,7 +48,10 @@ export function useMoodboard() {
     const updateItem = async (id: string, data: Partial<MoodboardItem>) => {
         try {
             const updated = await updateMoodboardItem(id, data);
-            setItems(prev => prev.map(item => item.$id === id ? updated : item));
+            setItems(prev => {
+                const others = prev.filter(item => item.$id !== id);
+                return [...others, updated];
+            });
             return updated;
         } catch (err) {
             setError('Failed to update item');

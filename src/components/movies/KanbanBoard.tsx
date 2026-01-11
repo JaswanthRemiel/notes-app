@@ -52,7 +52,7 @@ export function KanbanBoard() {
     if (loading) {
         return (
             <div className="h-[calc(100vh-64px)] flex items-center justify-center">
-                <div className="loading">Loading movies...</div>
+                <div className="loading">Loading tentukotta...</div>
             </div>
         );
     }

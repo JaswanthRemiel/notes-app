@@ -73,6 +73,7 @@ export function ImageBlock({ item, onUpdate, onDelete }: ImageBlockProps) {
             style={{
                 left: item.positionX,
                 top: item.positionY,
+                zIndex: isDragging ? 1000 : undefined
             }}
             onMouseDown={handleMouseDown}
             onMouseEnter={() => setIsHovered(true)}

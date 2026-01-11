@@ -51,7 +51,7 @@ export function MovieCard({ movie, onUpdateRating, onDelete, isDragging }: Movie
                     width: '60px',
                     height: '90px',
                     position: 'relative',
-                    borderRadius: '6px',
+                    borderRadius: '0',
                     overflow: 'hidden',
                     background: 'var(--bg-secondary)',
                     flexShrink: 0

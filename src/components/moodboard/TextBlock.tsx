@@ -151,8 +151,10 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
                 checkbox.removeAttribute('checked');
             }
 
-            const parent = checkbox.parentElement;
-            if (parent) {
+            // Find the parent div of the checkbox to strike through
+            const parent = checkbox.closest('div');
+
+            if (parent && parent !== contentRef.current) {
                 if (checkbox.checked) {
                     parent.style.textDecoration = 'line-through';
                     parent.style.color = 'var(--text-muted)';
@@ -177,6 +179,69 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
                 if (href) {
                     window.open(href, '_blank', 'noopener,noreferrer');
                 }
+            }
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === 'Enter') {
+            const selection = window.getSelection();
+            if (!selection || selection.rangeCount === 0) return;
+
+            const anchorNode = selection.anchorNode;
+
+            // Check if we are inside a checklist item (div with checkbox)
+            // or if the immediately preceding element is a checkbox
+            let isChecklist = false;
+            let parentBlock = anchorNode instanceof HTMLElement ? anchorNode : anchorNode?.parentElement;
+
+            // Traverse up to find a block element inside the editor
+            while (parentBlock && parentBlock !== contentRef.current && parentBlock.parentElement !== contentRef.current) {
+                parentBlock = parentBlock.parentElement;
+            }
+
+            if (parentBlock instanceof HTMLElement) {
+                if (parentBlock.querySelector('input[type="checkbox"]')) {
+                    isChecklist = true;
+                }
+            }
+
+            if (isChecklist && parentBlock instanceof HTMLElement) {
+                e.preventDefault();
+
+                // Create the new elements manually
+                const newContainer = document.createElement('div');
+                newContainer.style.display = 'flex';
+                newContainer.style.alignItems = 'flex-start';
+                newContainer.style.margin = '4px 0';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.style.marginRight = '8px';
+                checkbox.style.marginTop = '4px';
+                checkbox.style.cursor = 'pointer';
+
+                const textDiv = document.createElement('div');
+                textDiv.innerHTML = '<br>';
+
+                newContainer.appendChild(checkbox);
+                newContainer.appendChild(textDiv);
+
+                // Insert AFTER the current checklist item
+                if (parentBlock.nextSibling) {
+                    parentBlock.parentNode?.insertBefore(newContainer, parentBlock.nextSibling);
+                } else {
+                    parentBlock.parentNode?.appendChild(newContainer);
+                }
+
+                // Move cursor
+                const range = document.createRange();
+                range.selectNodeContents(textDiv);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+
+                return;
             }
         }
     };
@@ -265,7 +330,8 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
     };
 
     const formatChecklist = () => {
-        const checkboxHtml = '<input type="checkbox" style="margin-right: 8px; vertical-align: middle; cursor: pointer;">';
+        // Wrap in a div to allow proper line-through styling of just this item
+        const checkboxHtml = '<div style="display: flex; align-items: flex-start; margin: 4px 0;"><input type="checkbox" style="margin-right: 8px; margin-top: 4px; cursor: pointer;"> <div>&nbsp;</div></div>';
         execCommand('insertHTML', checkboxHtml);
     };
 
@@ -291,6 +357,7 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
             style={{
                 left: item.positionX,
                 top: item.positionY,
+                zIndex: isDragging ? 1000 : undefined
             }}
             onMouseDown={handleMouseDown}
             onMouseEnter={() => setIsHovered(true)}
@@ -358,6 +425,7 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
                 onFocus={handleFocus}
                 onBlur={handleContentBlur}
                 onClick={handleContentClick}
+                onKeyDown={handleKeyDown}
                 style={{ minHeight: '24px', cursor: 'text' }}
             />
         </div>
