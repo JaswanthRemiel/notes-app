@@ -1,27 +1,15 @@
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { SignupForm } from '@/components/auth/SignupForm';
+import { DotPattern } from '@/components/ui/DotPattern';
 
 export default function SignupPage() {
     return (
         <ThemeProvider>
             <AuthProvider>
-                <div style={{
-                    minHeight: '100vh',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '20px'
-                }}>
-                    <div className="card" style={{ maxWidth: '400px', width: '100%' }}>
-                        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                            <h1 style={{ fontSize: '28px', fontWeight: 700, marginBottom: '8px' }}>
-                                Create your account
-                            </h1>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-                                Start building your personal moodboard
-                            </p>
-                        </div>
+                <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden bg-background">
+                    <DotPattern className="absolute inset-x-0 inset-y-0 h-full w-full opacity-50" />
+                    <div className="relative z-10 w-full max-w-[350px]">
                         <SignupForm />
                     </div>
                 </div>

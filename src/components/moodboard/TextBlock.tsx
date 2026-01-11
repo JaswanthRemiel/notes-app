@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { MoodboardItem } from '@/types';
 
 interface TextBlockProps {
@@ -14,14 +14,26 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [showToolbar, setShowToolbar] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
+
     const blockRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
     const dragOffset = useRef({ x: 0, y: 0 });
+    const dragStart = useRef({ x: 0, y: 0 });
+    const isMouseDown = useRef(false);
+
+    // Sync content when not editing to avoid overwriting user changes or cursor position
+    useEffect(() => {
+        if (!isEditing && contentRef.current && item.content !== contentRef.current.innerHTML) {
+            contentRef.current.innerHTML = item.content || '';
+        }
+    }, [item.content, isEditing]);
 
     const handleMouseDown = (e: React.MouseEvent) => {
         if (isEditing) return;
 
-        setIsDragging(true);
+        isMouseDown.current = true;
+        dragStart.current = { x: e.clientX, y: e.clientY };
+
         const rect = blockRef.current?.getBoundingClientRect();
         if (rect) {
             dragOffset.current = {
@@ -32,7 +44,18 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-        if (!isDragging) return;
+        if (!isMouseDown.current) return;
+
+        // Apply drag threshold of 5px
+        if (!isDragging) {
+            const dx = e.clientX - dragStart.current.x;
+            const dy = e.clientY - dragStart.current.y;
+            if (Math.hypot(dx, dy) > 5) {
+                setIsDragging(true);
+            } else {
+                return; // Haven't moved enough to start dragging
+            }
+        }
 
         const canvas = document.getElementById('moodboard-canvas');
         if (!canvas) return;
@@ -48,66 +71,85 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
     };
 
     const handleMouseUp = () => {
-        if (!isDragging) return;
+        if (!isMouseDown.current) return;
 
-        setIsDragging(false);
+        isMouseDown.current = false;
 
-        if (blockRef.current) {
-            const left = parseInt(blockRef.current.style.left);
-            const top = parseInt(blockRef.current.style.top);
-            onUpdate(item.$id, { positionX: left, positionY: top });
+        if (isDragging) {
+            setIsDragging(false);
+            if (blockRef.current) {
+                const left = parseInt(blockRef.current.style.left);
+                const top = parseInt(blockRef.current.style.top);
+                onUpdate(item.$id, { positionX: left, positionY: top });
+            }
+        } else {
+            // If we didn't drag, this is a click - ensure we focus the editor
+            // Check if we didn't just click the delete button (which effectively unmounts us)
+            if (!isEditing && blockRef.current && contentRef.current) {
+                // Determine if we should focus. If the browser already focused it (clicked text),
+                // activeElement will match. If clicked padding, it won't.
+                if (document.activeElement !== contentRef.current) {
+                    contentRef.current.focus();
+
+                    // Move caret to end
+                    const range = document.createRange();
+                    const selection = window.getSelection();
+                    range.selectNodeContents(contentRef.current);
+                    range.collapse(false);
+                    selection?.removeAllRanges();
+                    selection?.addRange(range);
+                }
+            }
         }
     };
 
-    React.useEffect(() => {
-        if (isDragging) {
-            window.addEventListener('mousemove', handleMouseMove);
-            window.addEventListener('mouseup', handleMouseUp);
-        }
+    useEffect(() => {
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
         return () => {
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isDragging]);
+    }, [isDragging]); // Relying on refs for most state, but isDragging triggers render for class update
 
     const handleContentBlur = (e: React.FocusEvent<HTMLDivElement>) => {
-
         const newContent = e.currentTarget?.innerHTML || '';
 
-
+        // Small timeout to allow click events on toolbar to fire before hiding it
         setTimeout(() => {
-            if (!contentRef.current?.contains(document.activeElement)) {
-                setIsEditing(false);
-                setShowToolbar(false);
-                if (newContent !== item.content) {
-                    onUpdate(item.$id, { content: newContent });
-                }
+            // Check if focus moved to a toolbar button
+            if (document.activeElement?.closest('.text-toolbar')) {
+                return;
+            }
+
+            setIsEditing(false);
+            setShowToolbar(false);
+            if (newContent !== item.content) {
+                onUpdate(item.$id, { content: newContent });
             }
         }, 100);
     };
 
     const handleFocus = () => {
-        setIsEditing(true);
-        setShowToolbar(true);
+        if (!isDragging) {
+            setIsEditing(true);
+            setShowToolbar(true);
+        }
     };
 
 
     const handleContentClick = (e: React.MouseEvent) => {
         const target = e.target as HTMLElement;
 
-
+        // Checkbox toggling logic
         if (target.tagName === 'INPUT' && (target as HTMLInputElement).type === 'checkbox') {
             const checkbox = target as HTMLInputElement;
-
 
             if (checkbox.checked) {
                 checkbox.setAttribute('checked', 'true');
             } else {
                 checkbox.removeAttribute('checked');
             }
-
-            // Find the closest parent (likely a div or p) or the next text node wrapper
-
 
             const parent = checkbox.parentElement;
             if (parent) {
@@ -121,7 +163,6 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
                     parent.style.opacity = '1';
                 }
             }
-
 
             if (contentRef.current) {
                 onUpdate(item.$id, { content: contentRef.current.innerHTML });
@@ -142,10 +183,8 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
 
 
     const execCommand = (command: string, value?: string) => {
-
         contentRef.current?.focus();
-
-
+        // Use timeout to ensure focus is applied
         setTimeout(() => {
             document.execCommand(command, false, value);
         }, 0);
@@ -190,19 +229,16 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
         const selection = window.getSelection();
         if (!selection || selection.rangeCount === 0) return;
 
-
         const anchorNode = selection.anchorNode;
         const linkElement = anchorNode?.parentElement?.closest('a');
 
         if (linkElement) {
-
             const range = document.createRange();
             range.selectNode(linkElement);
             selection.removeAllRanges();
             selection.addRange(range);
             execCommand('unlink');
         } else {
-
             const selectedText = selection.toString();
             const urlPattern = /^(https?:\/\/|www\.)/i;
             let url = '';
@@ -215,7 +251,6 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
 
             if (url) {
                 execCommand('createLink', url);
-
                 setTimeout(() => {
                     const links = contentRef.current?.querySelectorAll('a');
                     links?.forEach(link => {
@@ -230,8 +265,6 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
     };
 
     const formatChecklist = () => {
-
-
         const checkboxHtml = '<input type="checkbox" style="margin-right: 8px; vertical-align: middle; cursor: pointer;">';
         execCommand('insertHTML', checkboxHtml);
     };
@@ -263,10 +296,10 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
-
-            {isHovered && (
+            {isHovered && !isDragging && (
                 <button
                     onClick={(e) => { e.stopPropagation(); onDelete(item.$id); }}
+                    onMouseDown={(e) => e.stopPropagation()}
                     style={{
                         position: 'absolute',
                         top: '4px',
@@ -289,9 +322,9 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
                 </button>
             )}
 
-
             {showToolbar && (
                 <div
+                    className="text-toolbar"
                     style={{
                         display: 'flex',
                         gap: '4px',
@@ -301,71 +334,21 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
                         borderRadius: '8px',
                         flexWrap: 'wrap'
                     }}
-                    onMouseDown={(e) => e.preventDefault()}
+                    onMouseDown={(e) => e.preventDefault()} // Prevent losing focus from editor
                 >
-                    <button
-                        onClick={formatBold}
-                        style={toolbarButtonStyle}
-                        title="Bold (Ctrl+B)"
-                    >
-                        <strong>B</strong>
-                    </button>
-                    <button
-                        onClick={formatItalic}
-                        style={toolbarButtonStyle}
-                        title="Italic (Ctrl+I)"
-                    >
-                        <em>I</em>
-                    </button>
-                    <button
-                        onClick={formatUnderline}
-                        style={toolbarButtonStyle}
-                        title="Underline (Ctrl+U)"
-                    >
-                        <u>U</u>
-                    </button>
-                    <button
-                        onClick={formatStrike}
-                        style={toolbarButtonStyle}
-                        title="Strikethrough"
-                    >
-                        <s>S</s>
-                    </button>
-
+                    <button onClick={formatBold} style={toolbarButtonStyle} title="Bold (Ctrl+B)"><strong>B</strong></button>
+                    <button onClick={formatItalic} style={toolbarButtonStyle} title="Italic (Ctrl+I)"><em>I</em></button>
+                    <button onClick={formatUnderline} style={toolbarButtonStyle} title="Underline (Ctrl+U)"><u>U</u></button>
+                    <button onClick={formatStrike} style={toolbarButtonStyle} title="Strikethrough"><s>S</s></button>
                     <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 4px' }} />
-                    <button
-                        onClick={formatLink}
-                        style={toolbarButtonStyle}
-                        title="Link / Unlink"
-                    >
-                        🔗
-                    </button>
+                    <button onClick={formatLink} style={toolbarButtonStyle} title="Link / Unlink">🔗</button>
                     <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 4px' }} />
-                    <button
-                        onClick={() => formatList('unordered')}
-                        style={toolbarButtonStyle}
-                        title="Bullet List"
-                    >
-                        •
-                    </button>
-                    <button
-                        onClick={() => formatList('ordered')}
-                        style={toolbarButtonStyle}
-                        title="Numbered List"
-                    >
-                        1.
-                    </button>
+                    <button onClick={() => formatList('unordered')} style={toolbarButtonStyle} title="Bullet List">•</button>
+                    <button onClick={() => formatList('ordered')} style={toolbarButtonStyle} title="Numbered List">1.</button>
                     <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 4px' }} />
-                    <button
-                        onClick={formatChecklist}
-                        style={toolbarButtonStyle}
-                        title="Insert Checkbox"
-                    >
-                        ☑️
-                    </button>
+                    <button onClick={formatChecklist} style={toolbarButtonStyle} title="Insert Checkbox">☑️</button>
                 </div>
             )}
-
 
             <div
                 ref={contentRef}
@@ -375,8 +358,7 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
                 onFocus={handleFocus}
                 onBlur={handleContentBlur}
                 onClick={handleContentClick}
-                dangerouslySetInnerHTML={{ __html: item.content || '' }}
-                style={{ minHeight: '60px' }}
+                style={{ minHeight: '24px', cursor: 'text' }}
             />
         </div>
     );

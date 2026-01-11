@@ -8,7 +8,7 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { DotPattern } from '@/components/ui/DotPattern';
 import { cn } from '@/lib/utils';
-import { PaintBoardIcon, Film01Icon, Logout04Icon } from 'hugeicons-react';
+import { Book03Icon, FilmRoll02Icon, LogoutSquare01Icon } from 'hugeicons-react';
 
 function ProtectedContent({ children }: { children: React.ReactNode }) {
     const { user, loading, logout } = useAuth();
@@ -50,12 +50,12 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
             <div className="dock">
                 <Link href="/moodboard">
                     <div className={`nav-item ${pathname === '/moodboard' ? 'active' : ''}`} title="Moodboard">
-                        <PaintBoardIcon size={24} />
+                        <Book03Icon size={24} />
                     </div>
                 </Link>
                 <Link href="/movies">
                     <div className={`nav-item ${pathname === '/movies' ? 'active' : ''}`} title="Movies">
-                        <Film01Icon size={24} />
+                        <FilmRoll02Icon size={24} />
                     </div>
                 </Link>
 
@@ -70,7 +70,7 @@ function ProtectedContent({ children }: { children: React.ReactNode }) {
                     style={{ background: 'transparent', border: 'none' }}
                     title={`Logout as ${user.name}`}
                 >
-                    <Logout04Icon size={24} />
+                    <LogoutSquare01Icon size={24} />
                 </button>
             </div>
 

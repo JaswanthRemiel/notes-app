@@ -45,7 +45,6 @@ export function Canvas() {
     }, []);
 
     const handleCanvasMouseDown = (e: React.MouseEvent) => {
-
         const target = e.target as HTMLElement;
         const isBackground = target.id === 'moodboard-canvas' || target.classList.contains('canvas-bg') || target.closest('.canvas-content')?.id === 'canvas-content';
 
@@ -56,12 +55,41 @@ export function Canvas() {
         }
     };
 
+    const handleCanvasTouchStart = (e: React.TouchEvent) => {
+        // Only handle single touch for panning (to allow pinch zoom later if needed, but for now just pan)
+        if (e.touches.length === 1) {
+            const touch = e.touches[0];
+            const target = e.target as HTMLElement;
+            const isBackground = target.id === 'moodboard-canvas' || target.classList.contains('canvas-bg');
+
+            // Allow panning if touching background
+            if (isBackground && !target.closest('.draggable-block')) {
+                // e.preventDefault(); // Don't prevent default here to allow scrolling if needed elsewhere, or decide based on UX
+                // Actually for a canvas, we likely want to prevent scroll
+                // e.preventDefault(); 
+                setIsPanning(true);
+                lastPanPoint.current = { x: touch.clientX, y: touch.clientY };
+            }
+        }
+    };
+
     const handleMouseMove = (e: React.MouseEvent) => {
         if (isPanning) {
             const dx = e.clientX - lastPanPoint.current.x;
             const dy = e.clientY - lastPanPoint.current.y;
             setPan(prev => ({ x: prev.x + dx, y: prev.y + dy }));
             lastPanPoint.current = { x: e.clientX, y: e.clientY };
+        }
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (isPanning && e.touches.length === 1) {
+            e.preventDefault(); // Prevent scrolling while panning
+            const touch = e.touches[0];
+            const dx = touch.clientX - lastPanPoint.current.x;
+            const dy = touch.clientY - lastPanPoint.current.y;
+            setPan(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+            lastPanPoint.current = { x: touch.clientX, y: touch.clientY };
         }
     };
 
@@ -238,6 +266,9 @@ export function Canvas() {
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
+            onTouchStart={handleCanvasTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleMouseUp}
             onPaste={handlePaste}
         >
 

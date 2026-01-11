@@ -6,7 +6,7 @@ import { useMovies } from '@/hooks/useMovies';
 import { getMovieDetails } from '@/lib/omdb';
 import { KanbanColumn } from './KanbanColumn';
 import { AddMovieModal } from './AddMovieModal';
-import { Button } from '@/components/ui/Button';
+import { Button } from "@/components/ui/button";
 import { MovieStatus, OMDbSearchResult } from '@/types';
 
 const columns: { id: MovieStatus; title: string; emoji: string }[] = [
@@ -51,29 +51,16 @@ export function KanbanBoard() {
 
     if (loading) {
         return (
-            <div style={{
-                height: 'calc(100vh - 64px)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-            }}>
+            <div className="h-[calc(100vh-64px)] flex items-center justify-center">
                 <div className="loading">Loading movies...</div>
             </div>
         );
     }
 
     return (
-        <div className="canvas-bg" style={{ padding: '24px', height: 'calc(100vh - 64px)', overflow: 'auto' }}>
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px',
-                marginBottom: '24px',
-                paddingTop: '20px',
-                position: 'relative',
-                zIndex: 10
-            }}>
-                <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 700 }}>
+        <div className="canvas-bg p-4 md:p-6 h-[calc(100vh-64px)] overflow-hidden flex flex-col">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 pt-5 relative z-10 shrink-0">
+                <h1 className="m-0 text-2xl font-bold">
                     🎬 Movies
                 </h1>
                 <Button onClick={() => setIsModalOpen(true)}>
@@ -82,12 +69,7 @@ export function KanbanBoard() {
             </div>
 
             <DragDropContext onDragEnd={handleDragEnd}>
-                <div style={{
-                    display: 'flex',
-                    gap: '20px',
-                    overflowX: 'auto',
-                    paddingBottom: '20px'
-                }}>
+                <div className="flex gap-4 overflow-x-auto pb-4 h-full snap-x snap-mandatory md:snap-none">
                     {columns.map((column) => (
                         <KanbanColumn
                             key={column.id}

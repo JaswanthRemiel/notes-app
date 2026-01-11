@@ -39,45 +39,22 @@ export function KanbanColumn({ id, title, emoji, movies, onUpdateRating, onDelet
     }, [movies, sortBy, showSorting]);
 
     return (
-        <div className="kanban-column" style={{ flex: 1, minWidth: '280px' }}>
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginBottom: '16px',
-                paddingBottom: '12px',
-                borderBottom: '1px solid var(--border-color)'
-            }}>
-                <span style={{ fontSize: '20px' }}>{emoji}</span>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>{title}</h3>
-                <span style={{
-                    marginLeft: 'auto',
-                    background: 'var(--bg-tertiary)',
-                    padding: '2px 8px',
-                    borderRadius: '12px',
-                    fontSize: '12px',
-                    color: 'var(--text-secondary)'
-                }}>
+        <div className="kanban-column flex-1 min-w-[280px] sm:min-w-[320px] snap-center h-full flex flex-col">
+            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border">
+                <span className="text-xl">{emoji}</span>
+                <h3 className="m-0 text-base font-semibold">{title}</h3>
+                <span className="ml-auto bg-muted px-2 py-0.5 rounded-xl text-xs text-muted-foreground">
                     {movies.length}
                 </span>
             </div>
 
             {/* Sorting dropdown - only for watched column */}
             {showSorting && movies.length > 1 && (
-                <div style={{ marginBottom: '12px' }}>
+                <div className="mb-3">
                     <select
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value as SortOption)}
-                        style={{
-                            width: '100%',
-                            padding: '8px 12px',
-                            borderRadius: '8px',
-                            border: '1px solid var(--border-color)',
-                            background: 'var(--bg-tertiary)',
-                            color: 'var(--text-primary)',
-                            fontSize: '13px',
-                            cursor: 'pointer'
-                        }}
+                        className="w-full p-2 rounded-lg border border-border bg-muted text-foreground text-[13px] cursor-pointer outline-none focus:ring-2 focus:ring-ring/20"
                     >
                         <option value="default">Sort by: Default</option>
                         <option value="rating-high">⭐ My Rating (High → Low)</option>
@@ -91,13 +68,8 @@ export function KanbanColumn({ id, title, emoji, movies, onUpdateRating, onDelet
                     <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        style={{
-                            minHeight: '300px',
-                            padding: '4px',
-                            borderRadius: '8px',
-                            background: snapshot.isDraggingOver ? 'var(--bg-tertiary)' : 'transparent',
-                            transition: 'background 0.2s'
-                        }}
+                        className={`min-h-[100px] flex-1 overflow-y-auto p-1 rounded-lg transition-colors ${snapshot.isDraggingOver ? 'bg-muted/50' : 'bg-transparent'
+                            }`}
                     >
                         {sortedMovies.map((movie, index) => (
                             <Draggable key={movie.$id} draggableId={movie.$id} index={index}>
@@ -106,6 +78,7 @@ export function KanbanColumn({ id, title, emoji, movies, onUpdateRating, onDelet
                                         ref={provided.innerRef}
                                         {...provided.draggableProps}
                                         {...provided.dragHandleProps}
+                                        className="mb-3 last:mb-0"
                                     >
                                         <MovieCard
                                             movie={movie}

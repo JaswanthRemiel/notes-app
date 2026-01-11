@@ -3,8 +3,17 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card"
 import Link from 'next/link';
 
 export function LoginForm() {
@@ -32,42 +41,54 @@ export function LoginForm() {
     };
 
     return (
-        <form onSubmit={handleSubmit} style={{ width: '100%' }}>
-            <Input
-                label="Username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username"
-                required
-            />
-            <Input
-                label="Password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-            />
-            {error && (
-                <p style={{ color: 'var(--error)', fontSize: '14px', marginBottom: '16px' }}>
-                    {error}
+        <Card className="w-full max-w-[350px]">
+            <CardHeader>
+                <CardTitle>Sign In</CardTitle>
+                <CardDescription>Enter your credentials to access your moodboard.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <form onSubmit={handleSubmit}>
+                    <div className="grid w-full items-center gap-4">
+                        <div className="flex flex-col space-y-1.5">
+                            <Label htmlFor="username">Username</Label>
+                            <Input
+                                id="username"
+                                placeholder="Enter your username"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="flex flex-col space-y-1.5">
+                            <Label htmlFor="password">Password</Label>
+                            <Input
+                                id="password"
+                                type="password"
+                                placeholder="••••••••"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                            />
+                        </div>
+                    </div>
+                    {error && (
+                        <p className="text-sm font-medium text-destructive mt-4">
+                            {error}
+                        </p>
+                    )}
+                    <Button className="w-full mt-6" type="submit" isLoading={loading}>
+                        Sign In
+                    </Button>
+                </form>
+            </CardContent>
+            <CardFooter className="flex justify-center">
+                <p className="text-sm text-muted-foreground">
+                    Don&apos;t have an account?{' '}
+                    <Link href="/signup" className="text-primary hover:underline">
+                        Sign up
+                    </Link>
                 </p>
-            )}
-            <Button type="submit" isLoading={loading} style={{ width: '100%' }}>
-                Sign In
-            </Button>
-            <p style={{
-                textAlign: 'center',
-                marginTop: '20px',
-                color: 'var(--text-secondary)',
-                fontSize: '14px'
-            }}>
-                Don&apos;t have an account?{' '}
-                <Link href="/signup" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
-                    Sign up
-                </Link>
-            </p>
-        </form>
+            </CardFooter>
+        </Card>
     );
 }
