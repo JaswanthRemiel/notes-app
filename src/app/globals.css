@@ -12,7 +12,7 @@
   --text-secondary: #6e6e73;
   --text-muted: #86868b;
   --border-color: #d2d2d7;
-  --accent: oklch(0.97 0 0);
+  --accent: #6366f1;
   --accent-hover: #4f46e5;
   --success: #22c55e;
   --warning: #f59e0b;
@@ -61,11 +61,29 @@
   --text-secondary: #a1a1a6;
   --text-muted: #6e6e73;
   --border-color: #2d2d35;
-  --accent: #160000;
+  --accent: #818cf8;
   --accent-hover: #6366f1;
   --shadow: rgba(0, 0, 0, 0.3);
   --shadow-lg: rgba(0, 0, 0, 0.5);
   --canvas-dot: #2d2d35;
+
+  /* shadcn dark mode overrides */
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
 }
 
 @theme inline {

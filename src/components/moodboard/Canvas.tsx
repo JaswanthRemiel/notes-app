@@ -6,6 +6,8 @@ import { uploadImage } from '@/lib/storage';
 import { TextBlock } from './TextBlock';
 import { ImageBlock } from './ImageBlock';
 import { Toolbar } from './Toolbar';
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/button';
 import { MoodboardItem } from '@/types';
 
 interface PendingImage {
@@ -22,12 +24,17 @@ const ZOOM_STEP = 0.1;
 export function Canvas() {
     const { items, loading, addItem, updateItem, removeItem } = useMoodboard();
     const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+    const [showFrameDialog, setShowFrameDialog] = useState(false);
+    const [pendingUploadFile, setPendingUploadFile] = useState<File | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
 
 
     const [zoom, setZoom] = useState(1);
     const [pan, setPan] = useState({ x: 0, y: 0 });
     const [isPanning, setIsPanning] = useState(false);
     const lastPanPoint = useRef({ x: 0, y: 0 });
+    const panStartPoint = useRef({ x: 0, y: 0 });
+    const isMouseDownForPan = useRef(false);
     const canvasRef = useRef<HTMLDivElement>(null);
 
 
@@ -46,27 +53,26 @@ export function Canvas() {
 
     const handleCanvasMouseDown = (e: React.MouseEvent) => {
         const target = e.target as HTMLElement;
-        const isBackground = target.id === 'moodboard-canvas' || target.classList.contains('canvas-bg') || target.closest('.canvas-content')?.id === 'canvas-content';
+        const isDraggableBlock = target.closest('.draggable-block');
 
-        if (e.button === 1 || (e.button === 0 && e.altKey) || (e.button === 0 && isBackground && !target.closest('.draggable-block'))) {
+        // Prepare for potential pan on middle mouse, Alt+click, or left click on background
+        if (e.button === 1 || (e.button === 0 && e.altKey) || (e.button === 0 && !isDraggableBlock)) {
             e.preventDefault();
-            setIsPanning(true);
+            isMouseDownForPan.current = true;
+            panStartPoint.current = { x: e.clientX, y: e.clientY };
             lastPanPoint.current = { x: e.clientX, y: e.clientY };
         }
     };
 
     const handleCanvasTouchStart = (e: React.TouchEvent) => {
-        // Only handle single touch for panning (to allow pinch zoom later if needed, but for now just pan)
         if (e.touches.length === 1) {
             const touch = e.touches[0];
             const target = e.target as HTMLElement;
-            const isBackground = target.id === 'moodboard-canvas' || target.classList.contains('canvas-bg');
+            const isDraggableBlock = target.closest('.draggable-block');
 
-            // Allow panning if touching background
-            if (isBackground && !target.closest('.draggable-block')) {
-                // e.preventDefault(); // Don't prevent default here to allow scrolling if needed elsewhere, or decide based on UX
-                // Actually for a canvas, we likely want to prevent scroll
-                // e.preventDefault(); 
+            // Pan on touch if not touching a block
+            if (!isDraggableBlock) {
+                e.preventDefault();
                 setIsPanning(true);
                 lastPanPoint.current = { x: touch.clientX, y: touch.clientY };
             }
@@ -74,17 +80,27 @@ export function Canvas() {
     };
 
     const handleMouseMove = (e: React.MouseEvent) => {
-        if (isPanning) {
-            const dx = e.clientX - lastPanPoint.current.x;
-            const dy = e.clientY - lastPanPoint.current.y;
-            setPan(prev => ({ x: prev.x + dx, y: prev.y + dy }));
-            lastPanPoint.current = { x: e.clientX, y: e.clientY };
+        if (isMouseDownForPan.current) {
+            const dx = e.clientX - panStartPoint.current.x;
+            const dy = e.clientY - panStartPoint.current.y;
+
+            // Start panning after moving 5px threshold
+            if (!isPanning && Math.hypot(dx, dy) > 5) {
+                setIsPanning(true);
+            }
+
+            if (isPanning) {
+                const moveDx = e.clientX - lastPanPoint.current.x;
+                const moveDy = e.clientY - lastPanPoint.current.y;
+                setPan(prev => ({ x: prev.x + moveDx, y: prev.y + moveDy }));
+                lastPanPoint.current = { x: e.clientX, y: e.clientY };
+            }
         }
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
         if (isPanning && e.touches.length === 1) {
-            e.preventDefault(); // Prevent scrolling while panning
+            e.preventDefault();
             const touch = e.touches[0];
             const dx = touch.clientX - lastPanPoint.current.x;
             const dy = touch.clientY - lastPanPoint.current.y;
@@ -95,6 +111,8 @@ export function Canvas() {
 
     const handleMouseUp = () => {
         setIsPanning(false);
+        isMouseDownForPan.current = false;
+        panStartPoint.current = { x: 0, y: 0 };
     };
 
     const getCanvasPosition = useCallback((clientX: number, clientY: number) => {
@@ -143,7 +161,19 @@ export function Canvas() {
         }
     }, [addItem, pan, zoom]);
 
-    const handleUploadImage = async (file: File) => {
+    const handleUploadImage = (file: File) => {
+        setPendingUploadFile(file);
+        setShowFrameDialog(true);
+    };
+
+    const confirmUpload = async (framed: boolean) => {
+        if (!pendingUploadFile) return;
+
+        const file = pendingUploadFile;
+        setShowFrameDialog(false);
+        setPendingUploadFile(null);
+        setIsUploading(true);
+
         const centerX = Math.round((window.innerWidth / 2 - pan.x) / zoom - 100 + Math.random() * 200);
         const centerY = Math.round((window.innerHeight / 2 - pan.y) / zoom - 100 + Math.random() * 200);
 
@@ -163,13 +193,15 @@ export function Canvas() {
                 type: 'image',
                 content: imageUrl,
                 positionX: centerX,
-                positionY: centerY
+                positionY: centerY,
+                style: JSON.stringify({ framed })
             });
         } catch (error) {
             console.error('Failed to upload image:', error);
         } finally {
             setPendingImages(prev => prev.filter(p => p.id !== pendingId));
             URL.revokeObjectURL(localUrl);
+            setIsUploading(false);
         }
     };
 
@@ -289,6 +321,8 @@ export function Canvas() {
                             item={item}
                             onUpdate={handleUpdate}
                             onDelete={handleDelete}
+                            zoom={zoom}
+                            pan={pan}
                         />
                     ) : (
                         <ImageBlock
@@ -296,6 +330,8 @@ export function Canvas() {
                             item={item}
                             onUpdate={handleUpdate}
                             onDelete={handleDelete}
+                            zoom={zoom}
+                            pan={pan}
                         />
                     )
                 ))}
@@ -441,6 +477,34 @@ export function Canvas() {
             </div>
 
             <Toolbar onAddText={handleAddText} onUploadImage={handleUploadImage} />
+
+            <Modal
+                isOpen={showFrameDialog}
+                onClose={() => {
+                    setShowFrameDialog(false);
+                    setPendingUploadFile(null);
+                }}
+                title="Add Frame?"
+            >
+                <div className="flex flex-col gap-4">
+                    <p className="text-gray-600 dark:text-gray-300">
+                        Do you want to add a frame to this image (Polaroid style) or keep it as is?
+                    </p>
+                    <div className="flex justify-end gap-3 mt-4">
+                        <Button
+                            variant="secondary"
+                            onClick={() => confirmUpload(false)}
+                        >
+                            No Frame (Transparent)
+                        </Button>
+                        <Button
+                            onClick={() => confirmUpload(true)}
+                        >
+                            Add Frame
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 }

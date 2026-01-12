@@ -2,14 +2,43 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { MoodboardItem } from '@/types';
+import {
+    TextBoldIcon,
+    TextItalicIcon,
+    TextUnderlineIcon,
+    TextStrikethroughIcon,
+    Link02Icon,
+    LeftToRightListNumberIcon,
+    LeftToRightListBulletIcon,
+    Task01Icon,
+    TextAlignLeftIcon,
+    TextAlignCenterIcon,
+    TextAlignRightIcon,
+    Heading01Icon,
+    Heading02Icon,
+    Heading03Icon,
+    ParagraphIcon
+} from 'hugeicons-react';
+import { cn } from '@/lib/utils'; // Assuming generic cn utility exists
 
 interface TextBlockProps {
     item: MoodboardItem;
     onUpdate: (id: string, data: Partial<MoodboardItem>) => void;
     onDelete: (id: string) => void;
+    zoom: number;
+    pan: { x: number; y: number };
 }
 
-export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
+const COLORS = [
+    { name: 'Default', value: 'var(--text-primary)' },
+    { name: 'Red', value: '#ef4444' },
+    { name: 'Orange', value: '#f97316' },
+    { name: 'Green', value: '#22c55e' },
+    { name: 'Blue', value: '#3b82f6' },
+    { name: 'Purple', value: '#a855f7' },
+];
+
+export function TextBlock({ item, onUpdate, onDelete, zoom, pan }: TextBlockProps) {
     const [isDragging, setIsDragging] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [showToolbar, setShowToolbar] = useState(false);
@@ -21,7 +50,7 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
     const dragStart = useRef({ x: 0, y: 0 });
     const isMouseDown = useRef(false);
 
-    // Sync content when not editing to avoid overwriting user changes or cursor position
+    // Sync content when not editing
     useEffect(() => {
         if (!isEditing && contentRef.current && item.content !== contentRef.current.innerHTML) {
             contentRef.current.innerHTML = item.content || '';
@@ -46,14 +75,14 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
     const handleMouseMove = (e: MouseEvent) => {
         if (!isMouseDown.current) return;
 
-        // Apply drag threshold of 5px
+        // Apply drag threshold
         if (!isDragging) {
             const dx = e.clientX - dragStart.current.x;
             const dy = e.clientY - dragStart.current.y;
             if (Math.hypot(dx, dy) > 5) {
                 setIsDragging(true);
             } else {
-                return; // Haven't moved enough to start dragging
+                return;
             }
         }
 
@@ -61,8 +90,9 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
         if (!canvas) return;
 
         const canvasRect = canvas.getBoundingClientRect();
-        const newX = e.clientX - canvasRect.left - dragOffset.current.x;
-        const newY = e.clientY - canvasRect.top - dragOffset.current.y;
+        // Convert screen coordinates to canvas coordinates accounting for zoom and pan
+        const newX = (e.clientX - canvasRect.left - pan.x) / zoom - dragOffset.current.x / zoom;
+        const newY = (e.clientY - canvasRect.top - pan.y) / zoom - dragOffset.current.y / zoom;
 
         if (blockRef.current) {
             blockRef.current.style.left = `${newX}px`;
@@ -71,7 +101,7 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
     };
 
     const handleMouseUp = () => {
-        if (!isMouseDown.current) return;
+        if (!isMouseDown.current) return; // Was not a drag initiated here
 
         isMouseDown.current = false;
 
@@ -83,11 +113,8 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
                 onUpdate(item.$id, { positionX: left, positionY: top });
             }
         } else {
-            // If we didn't drag, this is a click - ensure we focus the editor
-            // Check if we didn't just click the delete button (which effectively unmounts us)
+            // Click logic - Enable Edit Mode
             if (!isEditing && blockRef.current && contentRef.current) {
-                // Determine if we should focus. If the browser already focused it (clicked text),
-                // activeElement will match. If clicked padding, it won't.
                 if (document.activeElement !== contentRef.current) {
                     contentRef.current.focus();
 
@@ -110,33 +137,7 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isDragging]); // Relying on refs for most state, but isDragging triggers render for class update
-
-    const handleContentBlur = (e: React.FocusEvent<HTMLDivElement>) => {
-        const newContent = e.currentTarget?.innerHTML || '';
-
-        // Small timeout to allow click events on toolbar to fire before hiding it
-        setTimeout(() => {
-            // Check if focus moved to a toolbar button
-            if (document.activeElement?.closest('.text-toolbar')) {
-                return;
-            }
-
-            setIsEditing(false);
-            setShowToolbar(false);
-            if (newContent !== item.content) {
-                onUpdate(item.$id, { content: newContent });
-            }
-        }, 100);
-    };
-
-    const handleFocus = () => {
-        if (!isDragging) {
-            setIsEditing(true);
-            setShowToolbar(true);
-        }
-    };
-
+    }, [isDragging]);
 
     const handleContentClick = (e: React.MouseEvent) => {
         const target = e.target as HTMLElement;
@@ -144,7 +145,7 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
         // Checkbox toggling logic
         if (target.tagName === 'INPUT' && (target as HTMLInputElement).type === 'checkbox') {
             const checkbox = target as HTMLInputElement;
-
+            // Toggle attribute for persistence
             if (checkbox.checked) {
                 checkbox.setAttribute('checked', 'true');
             } else {
@@ -153,16 +154,17 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
 
             // Find the parent div of the checkbox to strike through
             const parent = checkbox.closest('div');
+            const textContent = parent?.querySelector('div');
 
-            if (parent && parent !== contentRef.current) {
+            if (textContent && textContent !== contentRef.current) {
                 if (checkbox.checked) {
-                    parent.style.textDecoration = 'line-through';
-                    parent.style.color = 'var(--text-muted)';
-                    parent.style.opacity = '0.7';
+                    (textContent as HTMLElement).style.textDecoration = 'line-through';
+                    (textContent as HTMLElement).style.color = 'var(--text-muted)';
+                    (textContent as HTMLElement).style.opacity = '0.7';
                 } else {
-                    parent.style.textDecoration = 'none';
-                    parent.style.color = 'var(--text-primary)';
-                    parent.style.opacity = '1';
+                    (textContent as HTMLElement).style.textDecoration = 'none';
+                    (textContent as HTMLElement).style.color = 'var(--text-primary)';
+                    (textContent as HTMLElement).style.opacity = '1';
                 }
             }
 
@@ -184,29 +186,25 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0) return;
+
+        const anchorNode = selection.anchorNode;
+        // Find if we are inside a checklist item wrapper
+        let checkItemWrapper = anchorNode instanceof HTMLElement ? anchorNode : anchorNode?.parentElement;
+        while (checkItemWrapper && checkItemWrapper !== contentRef.current && !checkItemWrapper.querySelector('input[type="checkbox"]')) {
+            // If we hit the editor root, stop
+            if (checkItemWrapper.parentElement === contentRef.current) break;
+            checkItemWrapper = checkItemWrapper.parentElement;
+        }
+
+        // Ensure strictly identifying the flex wrapper we created
+        const isChecklist = checkItemWrapper instanceof HTMLElement &&
+            checkItemWrapper.style.display === 'flex' &&
+            !!checkItemWrapper.querySelector('input[type="checkbox"]');
+
         if (e.key === 'Enter') {
-            const selection = window.getSelection();
-            if (!selection || selection.rangeCount === 0) return;
-
-            const anchorNode = selection.anchorNode;
-
-            // Check if we are inside a checklist item (div with checkbox)
-            // or if the immediately preceding element is a checkbox
-            let isChecklist = false;
-            let parentBlock = anchorNode instanceof HTMLElement ? anchorNode : anchorNode?.parentElement;
-
-            // Traverse up to find a block element inside the editor
-            while (parentBlock && parentBlock !== contentRef.current && parentBlock.parentElement !== contentRef.current) {
-                parentBlock = parentBlock.parentElement;
-            }
-
-            if (parentBlock instanceof HTMLElement) {
-                if (parentBlock.querySelector('input[type="checkbox"]')) {
-                    isChecklist = true;
-                }
-            }
-
-            if (isChecklist && parentBlock instanceof HTMLElement) {
+            if (isChecklist && checkItemWrapper instanceof HTMLElement) {
                 e.preventDefault();
 
                 // Create the new elements manually
@@ -222,212 +220,244 @@ export function TextBlock({ item, onUpdate, onDelete }: TextBlockProps) {
                 checkbox.style.cursor = 'pointer';
 
                 const textDiv = document.createElement('div');
-                textDiv.innerHTML = '<br>';
+                textDiv.innerHTML = '<br>'; // Empty line that can hold cursor
 
                 newContainer.appendChild(checkbox);
                 newContainer.appendChild(textDiv);
 
                 // Insert AFTER the current checklist item
-                if (parentBlock.nextSibling) {
-                    parentBlock.parentNode?.insertBefore(newContainer, parentBlock.nextSibling);
+                if (checkItemWrapper.nextSibling) {
+                    checkItemWrapper.parentNode?.insertBefore(newContainer, checkItemWrapper.nextSibling);
                 } else {
-                    parentBlock.parentNode?.appendChild(newContainer);
+                    checkItemWrapper.parentNode?.appendChild(newContainer);
                 }
 
-                // Move cursor
+                // Move cursor to new item
                 const range = document.createRange();
                 range.selectNodeContents(textDiv);
                 range.collapse(true);
                 selection.removeAllRanges();
                 selection.addRange(range);
-
                 return;
+            }
+        }
+
+        if (e.key === 'Backspace') {
+            if (isChecklist && checkItemWrapper instanceof HTMLElement) {
+                // Check if cursor is at the start of the text div
+                const range = selection.getRangeAt(0);
+                // Find the text container sibling of the checkbox
+                const textDiv = checkItemWrapper.querySelector('div');
+
+                // Only act if we are inside that text div (or it itself)
+                if (textDiv && (anchorNode === textDiv || textDiv.contains(anchorNode))) {
+                    if (range.startOffset === 0 && selection.isCollapsed) {
+                        e.preventDefault();
+
+                        // Case 1: Empty item -> Remove entirely
+                        if (textDiv.innerText.trim() === '' && textDiv.innerHTML !== '<br>') { // Check for empty or just br
+                            const prevSibling = checkItemWrapper.previousElementSibling;
+                            checkItemWrapper.remove();
+
+                            if (prevSibling instanceof HTMLElement) {
+                                // Focus previous item end
+                                // If previous is also checklist, focus its textdiv
+                                const prevTextDiv = prevSibling.querySelector('div');
+                                const target = prevTextDiv || prevSibling;
+
+                                const newRange = document.createRange();
+                                newRange.selectNodeContents(target);
+                                newRange.collapse(false);
+                                selection.removeAllRanges();
+                                selection.addRange(newRange);
+                            }
+                        } else {
+                            // Case 2: Not empty -> Convert to normal text (unwrap)
+                            const content = textDiv.innerHTML;
+                            const p = document.createElement('div');
+                            p.innerHTML = content;
+
+                            checkItemWrapper.parentNode?.insertBefore(p, checkItemWrapper);
+                            checkItemWrapper.remove();
+
+                            const newRange = document.createRange();
+                            newRange.selectNodeContents(p);
+                            newRange.collapse(true); // Start of line
+                            selection.removeAllRanges();
+                            selection.addRange(newRange);
+                        }
+                    }
+                }
             }
         }
     };
 
+    const handleContentBlur = (e: React.FocusEvent<HTMLDivElement>) => {
+        const newContent = e.currentTarget?.innerHTML || '';
+
+        // Timeout to check if focus moved to toolbar
+        setTimeout(() => {
+            if (document.activeElement?.closest('.text-toolbar')) {
+                return;
+            }
+
+            setIsEditing(false);
+            setShowToolbar(false);
+            if (newContent !== item.content) {
+                onUpdate(item.$id, { content: newContent });
+            }
+        }, 100);
+    };
+
+    const handleFocus = () => {
+        if (!isDragging) {
+            setIsEditing(true);
+            setShowToolbar(true);
+        }
+    };
+
+    // --- Formatting Logic ---
 
     const execCommand = (command: string, value?: string) => {
         contentRef.current?.focus();
-        // Use timeout to ensure focus is applied
         setTimeout(() => {
             document.execCommand(command, false, value);
         }, 0);
     };
 
-    const formatList = (type: 'ordered' | 'unordered') => {
-        contentRef.current?.focus();
-        setTimeout(() => {
-            if (type === 'ordered') {
-                document.execCommand('insertOrderedList', false);
-            } else {
-                document.execCommand('insertUnorderedList', false);
-            }
-        }, 0);
-    };
-
-    const formatBold = () => execCommand('bold');
-    const formatItalic = () => execCommand('italic');
-    const formatUnderline = () => execCommand('underline');
-    const formatStrike = () => execCommand('strikeThrough');
-
-    const formatCode = () => {
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-            const range = selection.getRangeAt(0);
-            const selectedText = range.toString();
-            if (selectedText) {
-                const code = document.createElement('code');
-                code.style.background = 'var(--bg-tertiary)';
-                code.style.padding = '2px 6px';
-                code.style.borderRadius = '4px';
-                code.style.fontFamily = 'monospace';
-                code.style.fontSize = '13px';
-                code.textContent = selectedText;
-                range.deleteContents();
-                range.insertNode(code);
-            }
-        }
-    };
-
+    const formatBlock = (tag: string) => execCommand('formatBlock', tag);
     const formatLink = () => {
-        const selection = window.getSelection();
-        if (!selection || selection.rangeCount === 0) return;
-
-        const anchorNode = selection.anchorNode;
-        const linkElement = anchorNode?.parentElement?.closest('a');
-
-        if (linkElement) {
-            const range = document.createRange();
-            range.selectNode(linkElement);
-            selection.removeAllRanges();
-            selection.addRange(range);
-            execCommand('unlink');
-        } else {
-            const selectedText = selection.toString();
-            const urlPattern = /^(https?:\/\/|www\.)/i;
-            let url = '';
-
-            if (urlPattern.test(selectedText)) {
-                url = selectedText.startsWith('http') ? selectedText : `https://${selectedText}`;
-            } else {
-                url = prompt('Enter URL:', 'https://') || '';
-            }
-
-            if (url) {
-                execCommand('createLink', url);
-                setTimeout(() => {
-                    const links = contentRef.current?.querySelectorAll('a');
-                    links?.forEach(link => {
-                        link.setAttribute('target', '_blank');
-                        link.setAttribute('rel', 'noopener noreferrer');
-                        link.style.color = 'var(--accent)';
-                        link.style.textDecoration = 'underline';
-                    });
-                }, 10);
-            }
-        }
+        const url = prompt('Enter URL:', 'https://');
+        if (url) execCommand('createLink', url);
     };
 
+    // Checkbox logic (simplified for brevity, similar to before)
     const formatChecklist = () => {
-        // Wrap in a div to allow proper line-through styling of just this item
         const checkboxHtml = '<div style="display: flex; align-items: flex-start; margin: 4px 0;"><input type="checkbox" style="margin-right: 8px; margin-top: 4px; cursor: pointer;"> <div>&nbsp;</div></div>';
         execCommand('insertHTML', checkboxHtml);
     };
 
-    const toolbarButtonStyle: React.CSSProperties = {
-        width: '28px',
-        height: '28px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'transparent',
-        border: '1px solid var(--border-color)',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        fontSize: '14px',
-        color: 'var(--text-primary)',
-        transition: 'all 0.15s ease'
-    };
+    // --- Render Helpers ---
+
+    const ToolbarButton = ({ onClick, icon: Icon, title, active }: any) => (
+        <button
+            onMouseDown={(e) => e.preventDefault()} // Prevent focus loss
+            onClick={onClick}
+            title={title}
+            className={cn(
+                "p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground",
+                active && "bg-muted text-foreground"
+            )}
+        >
+            <Icon size={16} />
+        </button>
+    );
+
+    const deleteButton = (
+        <button
+            onClick={(e) => { e.stopPropagation(); onDelete(item.$id); }}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="absolute -top-3 -right-3 w-6 h-6 bg-black/50 hover:bg-red-500 rounded-full text-white flex items-center justify-center text-sm z-50 transition-colors"
+        >
+            ×
+        </button>
+    );
 
     return (
         <div
             ref={blockRef}
-            className={`draggable-block text-block ${isDragging ? 'dragging' : ''}`}
+            className={cn(
+                "draggable-block text-block absolute min-w-[200px]",
+                isDragging && "opacity-80 cursor-grabbing",
+                !isDragging && "cursor-text"
+            )}
             style={{
                 left: item.positionX,
                 top: item.positionY,
-                zIndex: isDragging ? 1000 : undefined
+                zIndex: isDragging ? 1000 : (isEditing ? 100 : 10),
             }}
             onMouseDown={handleMouseDown}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
-            {isHovered && !isDragging && (
-                <button
-                    onClick={(e) => { e.stopPropagation(); onDelete(item.$id); }}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    style={{
-                        position: 'absolute',
-                        top: '4px',
-                        right: '4px',
-                        background: 'rgba(0, 0, 0, 0.5)',
-                        border: 'none',
-                        color: 'white',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: 10
-                    }}
-                >
-                    ×
-                </button>
-            )}
+            {/* Delete Button */}
+            {isHovered && !isDragging && deleteButton}
 
+            {/* Floating Toolbar */}
             {showToolbar && (
                 <div
-                    className="text-toolbar"
-                    style={{
-                        display: 'flex',
-                        gap: '4px',
-                        marginBottom: '8px',
-                        padding: '6px',
-                        background: 'var(--bg-tertiary)',
-                        borderRadius: '8px',
-                        flexWrap: 'wrap'
-                    }}
-                    onMouseDown={(e) => e.preventDefault()} // Prevent losing focus from editor
+                    className="text-toolbar absolute bottom-full left-0 mb-2 bg-background/95 backdrop-blur shadow-xl border border-border rounded-lg p-1 flex flex-col gap-1 min-w-max z-[100]"
+                    onMouseDown={(e) => e.preventDefault()}
                 >
-                    <button onClick={formatBold} style={toolbarButtonStyle} title="Bold (Ctrl+B)"><strong>B</strong></button>
-                    <button onClick={formatItalic} style={toolbarButtonStyle} title="Italic (Ctrl+I)"><em>I</em></button>
-                    <button onClick={formatUnderline} style={toolbarButtonStyle} title="Underline (Ctrl+U)"><u>U</u></button>
-                    <button onClick={formatStrike} style={toolbarButtonStyle} title="Strikethrough"><s>S</s></button>
-                    <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 4px' }} />
-                    <button onClick={formatLink} style={toolbarButtonStyle} title="Link / Unlink">🔗</button>
-                    <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 4px' }} />
-                    <button onClick={() => formatList('unordered')} style={toolbarButtonStyle} title="Bullet List">•</button>
-                    <button onClick={() => formatList('ordered')} style={toolbarButtonStyle} title="Numbered List">1.</button>
-                    <div style={{ width: '1px', background: 'var(--border-color)', margin: '0 4px' }} />
-                    <button onClick={formatChecklist} style={toolbarButtonStyle} title="Insert Checkbox">☑️</button>
+                    {/* Top Row: Formatting */}
+                    <div className="flex items-center gap-0.5 border-b border-border/50 pb-1">
+                        <ToolbarButton onClick={() => formatBlock('P')} icon={ParagraphIcon} title="Normal Text" />
+                        <ToolbarButton onClick={() => formatBlock('H1')} icon={Heading01Icon} title="Heading 1" />
+                        <ToolbarButton onClick={() => formatBlock('H2')} icon={Heading02Icon} title="Heading 2" />
+
+                        <div className="w-px h-4 bg-border mx-1" />
+
+                        <ToolbarButton onClick={() => execCommand('bold')} icon={TextBoldIcon} title="Bold" />
+                        <ToolbarButton onClick={() => execCommand('italic')} icon={TextItalicIcon} title="Italic" />
+                        <ToolbarButton onClick={() => execCommand('underline')} icon={TextUnderlineIcon} title="Underline" />
+                        <ToolbarButton onClick={() => execCommand('strikeThrough')} icon={TextStrikethroughIcon} title="Strikethrough" />
+
+                        <div className="w-px h-4 bg-border mx-1" />
+
+                        <ToolbarButton onClick={() => execCommand('justifyLeft')} icon={TextAlignLeftIcon} title="Align Left" />
+                        <ToolbarButton onClick={() => execCommand('justifyCenter')} icon={TextAlignCenterIcon} title="Align Center" />
+                        <ToolbarButton onClick={() => execCommand('justifyRight')} icon={TextAlignRightIcon} title="Align Right" />
+                    </div>
+
+                    {/* Bottom Row: Lists & Colors */}
+                    <div className="flex items-center gap-0.5 pt-1 justify-between">
+                        <div className="flex items-center gap-0.5">
+                            <ToolbarButton onClick={() => execCommand('insertUnorderedList')} icon={LeftToRightListBulletIcon} title="Bullet List" />
+                            <ToolbarButton onClick={() => execCommand('insertOrderedList')} icon={LeftToRightListNumberIcon} title="Numbered List" />
+                            <ToolbarButton onClick={formatChecklist} icon={Task01Icon} title="Checklist" />
+                            <ToolbarButton onClick={formatLink} icon={Link02Icon} title="Link" />
+                        </div>
+
+                        <div className="flex items-center gap-1 ml-2 pl-2 border-l border-border/50">
+                            {COLORS.map((color) => (
+                                <button
+                                    key={color.name}
+                                    onMouseDown={(e) => { e.preventDefault(); execCommand('foreColor', color.value); }}
+                                    className="w-4 h-4 rounded-full border border-border/50 hover:scale-110 transition-transform"
+                                    style={{ backgroundColor: color.value }}
+                                    title={color.name}
+                                />
+                            ))}
+                        </div>
+                    </div>
                 </div>
             )}
 
+            {/* Editable Content */}
+            <style>{globalStyles}</style>
             <div
                 ref={contentRef}
-                className="text-block-content"
+                className="text-block-content outline-none p-2 rounded-lg empty:before:content-['Type_something...'] empty:before:text-muted-foreground transition-all duration-200"
                 contentEditable
                 suppressContentEditableWarning
                 onFocus={handleFocus}
                 onBlur={handleContentBlur}
                 onClick={handleContentClick}
                 onKeyDown={handleKeyDown}
-                style={{ minHeight: '24px', cursor: 'text' }}
+                style={{
+                    minHeight: '24px',
+                    cursor: 'text',
+                    backgroundColor: isEditing ? 'rgba(var(--bg-rgb), 0.5)' : 'transparent'
+                }}
             />
         </div>
     );
 }
+
+// Global style for specific text block behaviors (checklist items etc)
+// We might want to move this to generic CSS if it grows
+const globalStyles = `
+    .text-block-content ul { list-style-type: disc; padding-left: 20px; }
+    .text-block-content ol { list-style-type: decimal; padding-left: 20px; }
+    .text-block-content a { color: var(--accent); text-decoration: underline; }
+`;

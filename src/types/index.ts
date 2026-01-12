@@ -6,6 +6,7 @@ export interface MoodboardItem {
   content: string;
   positionX: number;
   positionY: number;
+  style?: string; // JSON string for style config, e.g. {"framed": false}
   createdAt: string;
 }
 
@@ -14,6 +15,7 @@ export interface CreateMoodboardItem {
   content: string;
   positionX: number;
   positionY: number;
+  style?: string;
 }
 
 // Movie Types
