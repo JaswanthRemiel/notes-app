@@ -27,6 +27,7 @@ interface TextBlockProps {
     onDelete: (id: string) => void;
     zoom: number;
     pan: { x: number; y: number };
+    zIndex: number;
 }
 
 const COLORS = [
@@ -38,7 +39,7 @@ const COLORS = [
     { name: 'Purple', value: '#a855f7' },
 ];
 
-export function TextBlock({ item, onUpdate, onDelete, zoom, pan }: TextBlockProps) {
+export function TextBlock({ item, onUpdate, onDelete, zoom, pan, zIndex }: TextBlockProps) {
     const [isDragging, setIsDragging] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [showToolbar, setShowToolbar] = useState(false);
@@ -374,7 +375,7 @@ export function TextBlock({ item, onUpdate, onDelete, zoom, pan }: TextBlockProp
             style={{
                 left: item.positionX,
                 top: item.positionY,
-                zIndex: isDragging ? 1000 : (isEditing ? 100 : 10),
+                zIndex: isDragging ? 1000 : (isEditing ? 100 : zIndex),
             }}
             onMouseDown={handleMouseDown}
             onMouseEnter={() => setIsHovered(true)}

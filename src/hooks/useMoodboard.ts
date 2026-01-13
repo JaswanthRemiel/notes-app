@@ -60,18 +60,18 @@ export function useMoodboard() {
     };
 
     const removeItem = async (id: string) => {
-        // Find the item first to check if it's an image
+        // Find the item first to check if it's an image or file
         const itemToDelete = items.find(item => item.$id === id);
 
         try {
-            // If it's an image, delete from storage first
-            if (itemToDelete?.type === 'image' && itemToDelete.content) {
+            // If it's an image or file, delete from storage first
+            if ((itemToDelete?.type === 'image' || itemToDelete?.type === 'file') && itemToDelete.content) {
                 const fileId = getFileIdFromUrl(itemToDelete.content);
                 if (fileId) {
                     try {
                         await deleteImage(fileId);
                     } catch (storageErr) {
-                        console.warn('Failed to delete image from storage:', storageErr);
+                        console.warn('Failed to delete file from storage:', storageErr);
                         // Continue to delete the database record even if storage deletion fails
                     }
                 }

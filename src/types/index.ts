@@ -2,7 +2,7 @@
 export interface MoodboardItem {
   $id: string;
   userId: string;
-  type: 'text' | 'image';
+  type: 'text' | 'image' | 'countdown' | 'file';
   content: string;
   positionX: number;
   positionY: number;
@@ -11,7 +11,7 @@ export interface MoodboardItem {
 }
 
 export interface CreateMoodboardItem {
-  type: 'text' | 'image';
+  type: 'text' | 'image' | 'countdown' | 'file';
   content: string;
   positionX: number;
   positionY: number;

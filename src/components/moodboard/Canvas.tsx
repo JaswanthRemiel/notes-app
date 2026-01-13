@@ -2,17 +2,27 @@
 
 import React, { useState, useRef, useCallback } from 'react';
 import { useMoodboard } from '@/hooks/useMoodboard';
-import { uploadImage } from '@/lib/storage';
+import { uploadImage, uploadFile } from '@/lib/storage';
 import { TextBlock } from './TextBlock';
 import { ImageBlock } from './ImageBlock';
+import { CountdownBlock } from './CountdownBlock';
+import { FileBlock } from './FileBlock';
 import { Toolbar } from './Toolbar';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/button';
 import { MoodboardItem } from '@/types';
+import { File02Icon } from 'hugeicons-react';
 
 interface PendingImage {
     id: string;
     localUrl: string;
+    positionX: number;
+    positionY: number;
+}
+
+interface PendingFile {
+    id: string;
+    fileName: string;
     positionX: number;
     positionY: number;
 }
@@ -24,6 +34,7 @@ const ZOOM_STEP = 0.1;
 export function Canvas() {
     const { items, loading, addItem, updateItem, removeItem } = useMoodboard();
     const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+    const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
     const [showFrameDialog, setShowFrameDialog] = useState(false);
     const [pendingUploadFile, setPendingUploadFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -137,6 +148,18 @@ export function Canvas() {
         });
     };
 
+    const handleAddCountdown = async () => {
+        const centerX = Math.round((window.innerWidth / 2 - pan.x) / zoom - 100 + Math.random() * 200);
+        const centerY = Math.round((window.innerHeight / 2 - pan.y) / zoom - 100 + Math.random() * 200);
+
+        await addItem({
+            type: 'countdown',
+            content: '',
+            positionX: centerX,
+            positionY: centerY
+        });
+    };
+
     const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
         const text = e.clipboardData.getData('text');
 
@@ -211,6 +234,35 @@ export function Canvas() {
 
     const handleDelete = async (id: string) => {
         await removeItem(id);
+    };
+
+    const handleUploadFile = async (file: File) => {
+        const centerX = Math.round((window.innerWidth / 2 - pan.x) / zoom - 100 + Math.random() * 200);
+        const centerY = Math.round((window.innerHeight / 2 - pan.y) / zoom - 100 + Math.random() * 200);
+
+        const pendingId = `pending-file-${Date.now()}`;
+
+        setPendingFiles(prev => [...prev, {
+            id: pendingId,
+            fileName: file.name,
+            positionX: centerX,
+            positionY: centerY
+        }]);
+
+        try {
+            const { url, fileName } = await uploadFile(file);
+            await addItem({
+                type: 'file',
+                content: url,
+                positionX: centerX,
+                positionY: centerY,
+                style: JSON.stringify({ fileName })
+            });
+        } catch (error) {
+            console.error('Failed to upload file:', error);
+        } finally {
+            setPendingFiles(prev => prev.filter(p => p.id !== pendingId));
+        }
     };
 
     const handleZoomIn = () => setZoom(prev => Math.min(MAX_ZOOM, prev + ZOOM_STEP));
@@ -314,7 +366,7 @@ export function Canvas() {
                 }}
             >
 
-                {items.map((item) => (
+                {items.map((item, index) => (
                     item.type === 'text' ? (
                         <TextBlock
                             key={item.$id}
@@ -323,6 +375,27 @@ export function Canvas() {
                             onDelete={handleDelete}
                             zoom={zoom}
                             pan={pan}
+                            zIndex={index + 1}
+                        />
+                    ) : item.type === 'countdown' ? (
+                        <CountdownBlock
+                            key={item.$id}
+                            item={item}
+                            onUpdate={handleUpdate}
+                            onDelete={handleDelete}
+                            zoom={zoom}
+                            pan={pan}
+                            zIndex={index + 1}
+                        />
+                    ) : item.type === 'file' ? (
+                        <FileBlock
+                            key={item.$id}
+                            item={item}
+                            onUpdate={handleUpdate}
+                            onDelete={handleDelete}
+                            zoom={zoom}
+                            pan={pan}
+                            zIndex={index + 1}
                         />
                     ) : (
                         <ImageBlock
@@ -332,6 +405,7 @@ export function Canvas() {
                             onDelete={handleDelete}
                             zoom={zoom}
                             pan={pan}
+                            zIndex={index + 1}
                         />
                     )
                 ))}
@@ -380,6 +454,51 @@ export function Canvas() {
                                 fontWeight: 500
                             }}>
                                 Uploading...
+                            </div>
+                        </div>
+                    </div>
+                ))}
+
+                {pendingFiles.map((pending) => (
+                    <div
+                        key={pending.id}
+                        className="draggable-block"
+                        style={{
+                            position: 'absolute',
+                            left: pending.positionX,
+                            top: pending.positionY,
+                        }}
+                    >
+                        <div
+                            className="p-4 rounded-lg flex items-center gap-3 opacity-70"
+                            style={{
+                                background: 'var(--bg-secondary)',
+                                border: '1px solid var(--border-color)',
+                                boxShadow: '0 4px 12px var(--shadow)',
+                                minWidth: '160px'
+                            }}
+                        >
+                            <div
+                                className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
+                                style={{ background: 'var(--bg-tertiary)' }}
+                            >
+                                <File02Icon size={20} style={{ color: 'var(--text-secondary)' }} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div
+                                    className="text-sm font-medium truncate"
+                                    style={{ color: 'var(--text-primary)' }}
+                                >
+                                    {pending.fileName.length > 15
+                                        ? pending.fileName.substring(0, 12) + '...'
+                                        : pending.fileName}
+                                </div>
+                                <div
+                                    className="text-xs"
+                                    style={{ color: 'var(--accent)' }}
+                                >
+                                    Uploading...
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -476,7 +595,7 @@ export function Canvas() {
                 </button>
             </div>
 
-            <Toolbar onAddText={handleAddText} onUploadImage={handleUploadImage} />
+            <Toolbar onAddText={handleAddText} onUploadImage={handleUploadImage} onAddCountdown={handleAddCountdown} onUploadFile={handleUploadFile} />
 
             <Modal
                 isOpen={showFrameDialog}

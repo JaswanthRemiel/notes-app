@@ -2,19 +2,27 @@
 
 import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { TextFontIcon, Image02Icon, Add01Icon } from 'hugeicons-react';
+import { TextFontIcon, Image02Icon, Add01Icon, Time02Icon, File02Icon } from 'hugeicons-react';
 import { cn } from '@/lib/utils';
 
 interface ToolbarProps {
     onAddText: () => void;
     onUploadImage: (file: File) => void;
+    onAddCountdown: () => void;
+    onUploadFile: (file: File) => void;
 }
 
-export function Toolbar({ onAddText, onUploadImage }: ToolbarProps) {
+export function Toolbar({ onAddText, onUploadImage, onAddCountdown, onUploadFile }: ToolbarProps) {
     const [isOpen, setIsOpen] = useState(false);
+    const imageInputRef = useRef<HTMLInputElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleImageClick = () => {
+        imageInputRef.current?.click();
+        setIsOpen(false);
+    };
+
+    const handleFileClick = () => {
         fileInputRef.current?.click();
         setIsOpen(false);
     };
@@ -24,10 +32,18 @@ export function Toolbar({ onAddText, onUploadImage }: ToolbarProps) {
         setIsOpen(false);
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             onUploadImage(file);
+            e.target.value = '';
+        }
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            onUploadFile(file);
             e.target.value = '';
         }
     };
@@ -67,12 +83,36 @@ export function Toolbar({ onAddText, onUploadImage }: ToolbarProps) {
                 >
                     <TextFontIcon size={20} />
                 </Button>
+
+                <Button
+                    onClick={() => { onAddCountdown(); setIsOpen(false); }}
+                    variant="secondary"
+                    className="h-12 w-12 rounded-full shadow-md"
+                    title="Add Countdown"
+                >
+                    <Time02Icon size={20} />
+                </Button>
+
+                <Button
+                    onClick={handleFileClick}
+                    variant="secondary"
+                    className="h-12 w-12 rounded-full shadow-md"
+                    title="Upload File"
+                >
+                    <File02Icon size={20} />
+                </Button>
             </div>
 
             <input
-                ref={fileInputRef}
+                ref={imageInputRef}
                 type="file"
                 accept="image/*"
+                onChange={handleImageChange}
+                style={{ display: 'none' }}
+            />
+            <input
+                ref={fileInputRef}
+                type="file"
                 onChange={handleFileChange}
                 style={{ display: 'none' }}
             />

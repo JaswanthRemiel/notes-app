@@ -10,9 +10,10 @@ interface ImageBlockProps {
     onDelete: (id: string) => void;
     zoom: number;
     pan: { x: number; y: number };
+    zIndex: number;
 }
 
-export function ImageBlock({ item, onUpdate, onDelete, zoom, pan }: ImageBlockProps) {
+export function ImageBlock({ item, onUpdate, onDelete, zoom, pan, zIndex }: ImageBlockProps) {
     const [isDragging, setIsDragging] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
     const blockRef = useRef<HTMLDivElement>(null);
@@ -106,7 +107,7 @@ export function ImageBlock({ item, onUpdate, onDelete, zoom, pan }: ImageBlockPr
             style={{
                 left: item.positionX,
                 top: item.positionY,
-                zIndex: isDragging ? 1000 : undefined,
+                zIndex: isDragging ? 1000 : zIndex,
                 position: 'absolute'
             }}
             onMouseDown={handleMouseDown}

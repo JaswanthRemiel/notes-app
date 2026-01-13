@@ -22,3 +22,18 @@ export function getFileIdFromUrl(url: string): string | null {
     const match = url.match(/files\/([^/]+)\/view/);
     return match ? match[1] : null;
 }
+
+export async function uploadFile(file: File): Promise<{ url: string; fileName: string }> {
+    const response = await storage.createFile(
+        STORAGE_BUCKET_ID,
+        ID.unique(),
+        file
+    );
+
+    const url = storage.getFileView(STORAGE_BUCKET_ID, response.$id);
+    return { url: url.toString(), fileName: file.name };
+}
+
+export function getFileDownloadUrl(fileId: string): string {
+    return storage.getFileDownload(STORAGE_BUCKET_ID, fileId).toString();
+}
