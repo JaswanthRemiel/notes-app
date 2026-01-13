@@ -2,11 +2,13 @@
 
 import React, { useState, useRef, useCallback } from 'react';
 import { useMoodboard } from '@/hooks/useMoodboard';
+import { useMoodboards } from '@/hooks/useMoodboards';
 import { uploadImage, uploadFile } from '@/lib/storage';
 import { TextBlock } from './TextBlock';
 import { ImageBlock } from './ImageBlock';
 import { CountdownBlock } from './CountdownBlock';
 import { FileBlock } from './FileBlock';
+import { MoodboardSwitcher } from './MoodboardSwitcher';
 import { Toolbar } from './Toolbar';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/button';
@@ -31,8 +33,12 @@ const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 2;
 const ZOOM_STEP = 0.1;
 
+
 export function Canvas() {
-    const { items, loading, addItem, updateItem, removeItem } = useMoodboard();
+    const { moodboards, selectedMoodboard, selectedMoodboardId, selectMoodboard, addMoodboard, removeMoodboard, isDeleting, loading: boardsLoading } = useMoodboards();
+    const { items, loading: itemsLoading, addItem, updateItem, removeItem } = useMoodboard(selectedMoodboardId);
+    const loading = boardsLoading || itemsLoading;
+
     const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
     const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
     const [showFrameDialog, setShowFrameDialog] = useState(false);
@@ -47,6 +53,7 @@ export function Canvas() {
     const panStartPoint = useRef({ x: 0, y: 0 });
     const isMouseDownForPan = useRef(false);
     const canvasRef = useRef<HTMLDivElement>(null);
+
 
 
     const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -355,6 +362,15 @@ export function Canvas() {
             onTouchEnd={handleMouseUp}
             onPaste={handlePaste}
         >
+            {/* Moodboard Switcher - top left */}
+            <MoodboardSwitcher
+                moodboards={moodboards}
+                selectedMoodboard={selectedMoodboard}
+                onSelect={selectMoodboard}
+                onAdd={addMoodboard}
+                onDelete={removeMoodboard}
+                isDeleting={isDeleting}
+            />
 
             <div
                 style={{

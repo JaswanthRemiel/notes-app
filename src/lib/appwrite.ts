@@ -12,6 +12,7 @@ export const storage = new Storage(client);
 
 export const DATABASE_ID = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || '';
 export const MOODBOARD_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_MOODBOARD_COLLECTION_ID || '';
+export const MOODBOARDS_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_MOODBOARDS_COLLECTION_ID || '';
 export const MOVIES_COLLECTION_ID = process.env.NEXT_PUBLIC_APPWRITE_MOVIES_COLLECTION_ID || '';
 export const STORAGE_BUCKET_ID = process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID || '';
 

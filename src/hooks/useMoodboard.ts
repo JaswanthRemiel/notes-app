@@ -6,18 +6,22 @@ import { getMoodboardItems, createMoodboardItem, updateMoodboardItem, deleteMood
 import { deleteImage, getFileIdFromUrl } from '@/lib/storage';
 import { useAuth } from '@/context/AuthContext';
 
-export function useMoodboard() {
+export function useMoodboard(moodboardId: string | null) {
     const { user } = useAuth();
     const [items, setItems] = useState<MoodboardItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const fetchItems = useCallback(async () => {
-        if (!user) return;
+        if (!user || !moodboardId) {
+            setItems([]);
+            setLoading(false);
+            return;
+        }
 
         try {
             setLoading(true);
-            const data = await getMoodboardItems(user.$id);
+            const data = await getMoodboardItems(user.$id, moodboardId);
             setItems(data);
             setError(null);
         } catch (err) {
@@ -26,17 +30,17 @@ export function useMoodboard() {
         } finally {
             setLoading(false);
         }
-    }, [user]);
+    }, [user, moodboardId]);
 
     useEffect(() => {
         fetchItems();
     }, [fetchItems]);
 
-    const addItem = async (data: CreateMoodboardItem) => {
-        if (!user) return;
+    const addItem = async (data: Omit<CreateMoodboardItem, 'moodboardId'>) => {
+        if (!user || !moodboardId) return;
 
         try {
-            const newItem = await createMoodboardItem(user.$id, data);
+            const newItem = await createMoodboardItem(user.$id, { ...data, moodboardId });
             setItems(prev => [...prev, newItem]);
             return newItem;
         } catch (err) {
@@ -96,3 +100,4 @@ export function useMoodboard() {
         refresh: fetchItems
     };
 }
+

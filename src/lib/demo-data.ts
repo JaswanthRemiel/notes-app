@@ -12,6 +12,7 @@ export const DEMO_MOODBOARD_ITEMS: MoodboardItem[] = [
     {
         $id: 'text-1',
         userId: 'demo-user-123',
+        moodboardId: 'demo-board-1',
         type: 'text',
         content: '✨ Welcome to your moodboard! Drag me around and edit my text.',
         positionX: 100,
@@ -21,6 +22,7 @@ export const DEMO_MOODBOARD_ITEMS: MoodboardItem[] = [
     {
         $id: 'text-2',
         userId: 'demo-user-123',
+        moodboardId: 'demo-board-1',
         type: 'text',
         content: '💡 Ideas for 2026:\n• Learn a new skill\n• Travel somewhere new\n• Start a side project',
         positionX: 400,
@@ -30,6 +32,7 @@ export const DEMO_MOODBOARD_ITEMS: MoodboardItem[] = [
     {
         $id: 'text-3',
         userId: 'demo-user-123',
+        moodboardId: 'demo-board-1',
         type: 'text',
         content: '🎯 Goals:\n- Build amazing apps\n- Stay creative\n- Have fun!',
         positionX: 150,
@@ -39,6 +42,7 @@ export const DEMO_MOODBOARD_ITEMS: MoodboardItem[] = [
     {
         $id: 'image-1',
         userId: 'demo-user-123',
+        moodboardId: 'demo-board-1',
         type: 'image',
         content: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=400&fit=crop',
         positionX: 650,
@@ -48,6 +52,7 @@ export const DEMO_MOODBOARD_ITEMS: MoodboardItem[] = [
     {
         $id: 'image-2',
         userId: 'demo-user-123',
+        moodboardId: 'demo-board-1',
         type: 'image',
         content: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&h=400&fit=crop',
         positionX: 450,

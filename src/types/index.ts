@@ -1,16 +1,28 @@
 // Moodboard Types
+export interface Moodboard {
+  $id: string;
+  userId: string;
+  name: string;
+}
+
+export interface CreateMoodboard {
+  name: string;
+}
+
 export interface MoodboardItem {
   $id: string;
   userId: string;
+  moodboardId: string;
   type: 'text' | 'image' | 'countdown' | 'file';
   content: string;
   positionX: number;
   positionY: number;
-  style?: string; // JSON string for style config, e.g. {"framed": false}
+  style?: string;
   createdAt: string;
 }
 
 export interface CreateMoodboardItem {
+  moodboardId: string;
   type: 'text' | 'image' | 'countdown' | 'file';
   content: string;
   positionX: number;
